@@ -1,0 +1,19 @@
+name: FancyTp
+version: Alpha_0.1
+author: Goofables
+main: com.gmail.goofables.Main
+description: A spigot plugin
+softdepend:
+- Essentials
+- SuperVanish
+- PremiumVanish
+commands:
+  FancyTp:
+    description: Test if plugin is working
+    usage: /<command> <toggle|on|off> [player]
+    permission: FancyTp.test
+    permission-message: You need FancyTp.test to run
+  tp:
+    description: Tp without the fancy
+    permissions: minecraft.command.tp
+    alias: [ntp, tpnow]
