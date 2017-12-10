@@ -1,7 +1,7 @@
 name: FancyTp
 version: Alpha_0.1
 author: Goofables
-main: com.gmail.goofables.Main
+main: com.gmail.goofables.FancyTp.FancyTp
 description: A spigot plugin
 softdepend:
 - Essentials
@@ -11,9 +11,30 @@ commands:
   FancyTp:
     description: Test if plugin is working
     usage: /<command> <toggle|on|off> [player]
-    permission: FancyTp.test
+    permission: fancytp.toggle
     permission-message: You need FancyTp.test to run
-  tp:
+  normaltp:
     description: Tp without the fancy
     permissions: minecraft.command.tp
     alias: [ntp, tpnow]
+permissions:
+  fancytp.*:
+    description: All fancytp permissions
+    default: false
+    children:
+      fancytp.nocost: true
+      fancytp.noeffect: true
+      fancytp.toggle: true
+      fancytp.toggle.others: true
+  fancytp.nocost:
+    description: No exp cost when tping
+    default: false
+  fancytp.noeffect:
+    description:  No effect when tping
+    default: false
+  fancytp.toggle:
+    description: Allow toggling fancytp
+    default: op
+  fancytp.toggle.others:
+    description: Allow toggling fancytp on others
+    default: op

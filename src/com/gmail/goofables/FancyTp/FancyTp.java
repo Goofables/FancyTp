@@ -1,4 +1,4 @@
-package com.gmail.goofables;
+package com.gmail.goofables.FancyTp;
 
 /**
  * Spigot Template created by ***REMOVED*** on {DATE}.
@@ -10,6 +10,7 @@ import com.earth2me.essentials.Essentials;
 import com.earth2me.essentials.User;
 import de.myzelyam.api.vanish.VanishAPI;
 import org.bukkit.Bukkit;
+import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.command.Command;
@@ -26,10 +27,10 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Main extends JavaPlugin implements Listener {
+public class FancyTp extends JavaPlugin implements Listener {
+   ArrayList<Player> frozen = new ArrayList<>();
    private FileConfiguration config = getConfig();
    private List<String> disabled;
-   private ArrayList<Player> frozen = new ArrayList<>();
    private ConfigurationSection messages = config.getConfigurationSection("messages");
    
    @Override
@@ -53,41 +54,40 @@ public class Main extends JavaPlugin implements Listener {
       final Player player = e.getPlayer();
       final Location from = e.getFrom().clone();
       final Location to = e.getTo().clone();
-      if (disabled.contains(player.getName())) return;
-      if (Bukkit.getPluginManager().isPluginEnabled("SuperVanish") || Bukkit.getPluginManager().isPluginEnabled("PremiumVanish")) {
+      if (disabled.contains(player.getName()) || player.hasPermission("fancytp.noeffect")) return;
+      
+      // Player is hidden in supper vanish
+      if (Bukkit.getPluginManager().isPluginEnabled("SuperVanish") || Bukkit.getPluginManager().isPluginEnabled("PremiumVanish"))
          if (VanishAPI.isInvisible(player)) return;
-      }
+      
+      // Player is hidden
       if (Bukkit.getPluginManager().isPluginEnabled("Essentials")) {
          Essentials ess = (Essentials)Bukkit.getPluginManager().getPlugin("Essentials");
          User u = ess.getUser(player);
          if (u != null && u.isHidden()) return;
       }
-      if (!e.getCause().equals(PlayerTeleportEvent.TeleportCause.COMMAND)) return;
       
+      // If it isnt a command ignore it
+      if (!e.getCause().equals(PlayerTeleportEvent.TeleportCause.COMMAND)) {return;}
+      
+      // Cancel the event
       e.setCancelled(true);
+      
+      // Exp cost management
       int expCost = (int)from.distance(to);
       int exp = player.getTotalExperience();
-      if (expCost > exp) {
-         player.sendMessage("§cNot enough exp! Required: §6" + expCost + "§c Currently Have: §6" + exp + "§c!");
-         return;
-      } else {
-         player.setExp(0);
-         player.setLevel(0);
-         player.setTotalExperience(0);
-         player.giveExp(exp - expCost);
-      }
-      player.sendTitle(messages.getString("title").replace("&", "§"), messages.getString("subtitle").replace("&", "§").replace("%cost%", String.valueOf(expCost)), 10, 30, 5);
+      if ((player.getGameMode().equals(GameMode.SURVIVAL) || player.getGameMode().equals(GameMode.ADVENTURE)) && !player.hasPermission("fancytp.nocost"))
+         if (expCost > exp) {
+            player.sendMessage("§cNot enough exp! Required: §6" + expCost + "§c Currently Have: §6" + exp + "§c!");
+            return;
+         } else Bukkit.getScheduler().runTaskTimer(this, new ExpTask(player, expCost, 45 /*45 ticks per tp*/), 0, 1);
+      else expCost = -1;
+      
+      player.sendTitle(messages.getString("title").replace("&", "§"), messages.getString("subtitle").replace("&", "§").replace("%cost%", (expCost >= 0)?String.valueOf(expCost):"free"), 10, 30, 5);
       frozen.add(player);
       from.getWorld().spawnParticle(Particle.PORTAL, from.clone().add(0, .5, 0), 1000, .1, .5, .1, 1);
       to.getWorld().spawnParticle(Particle.PORTAL, to.clone().add(0, .5, 0), 1000, .1, .5, .1, 1);
-      Bukkit.getScheduler().runTaskLater(this, () -> {
-         Bukkit.getScheduler().runTaskLater(this, () -> frozen.remove(player), 5);
-         from.getWorld().strikeLightningEffect(from);
-         to.getWorld().strikeLightningEffect(to);
-         player.teleport(to, PlayerTeleportEvent.TeleportCause.PLUGIN);
-         to.getWorld().spawnParticle(Particle.LAVA, to.clone().add(0, .5, 0), 100);
-      }, 40);
-      
+      Bukkit.getScheduler().runTaskLater(this, new TpTask(this, player, from, to), 40);
    }
    
    @EventHandler
@@ -101,14 +101,12 @@ public class Main extends JavaPlugin implements Listener {
       switch (command.getName().toLowerCase()) {
          case "fancytp":
             if (args.length < 1) return false;
-            if (args[0].equals("config")) {
-            
-            }
+            if (args[0].equals("config")) {}
             Player target = (Player)sender;
             if (args.length > 1) target = getServer().getPlayer(args[1]);
             if (target == null) {
                sender.sendMessage("§cError! Could not find player `§o" + args[1] + "§c`.");
-               return false;
+               return true;
             }
             String targetName = target.getName();
             switch (args[0].toLowerCase()) {
@@ -127,6 +125,7 @@ public class Main extends JavaPlugin implements Listener {
             }
             config.set("exclude", disabled);
             saveConfig();
+            sender.sendMessage("§6FancyTp " + (disabled.contains(targetName)?"§cdisabled":"§aenabled") + " §6for player" + target.getDisplayName() + ".");
             return true;
          case "tp":
             StringBuilder com = new StringBuilder("minecraft:tp");
