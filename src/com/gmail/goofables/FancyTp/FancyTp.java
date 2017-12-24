@@ -12,7 +12,6 @@ import de.myzelyam.api.vanish.VanishAPI;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
-import org.bukkit.Particle;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
@@ -24,6 +23,9 @@ import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -31,7 +33,9 @@ public class FancyTp extends JavaPlugin implements Listener {
    ArrayList<Player> frozen = new ArrayList<>();
    private FileConfiguration config = getConfig();
    private List<String> disabled;
-   private ConfigurationSection messages = config.getConfigurationSection("messages");
+   private ConfigurationSection messages;
+   private String cost;
+   private String wait;
    
    @Override
    public void onEnable() {
@@ -40,7 +44,13 @@ public class FancyTp extends JavaPlugin implements Listener {
       if (!config.isConfigurationSection("messages")) config.createSection("messages");
       config.addDefault("messages.title", "&aWarping");
       config.addDefault("messages.subtitle", "&cCost: &6%cost%");
+      config.addDefault("xpCost", ".5%dist%");
+      config.addDefault("xpCost.p", ".5%dist%");
+      config.addDefault("xpCost.r", "1");
+      config.addDefault("tpWait", "45");
       messages = config.getConfigurationSection("messages");
+      cost = config.getString("xpCost").replaceAll(";", " ");
+      wait = config.getString("tpWait").replaceAll(";", " ");
       config.options().copyDefaults(true);
       saveConfig();
       getServer().getPluginManager().registerEvents(this, this);
@@ -55,7 +65,7 @@ public class FancyTp extends JavaPlugin implements Listener {
       final Location from = e.getFrom().clone();
       final Location to = e.getTo().clone();
       if (disabled.contains(player.getName()) || player.hasPermission("fancytp.noeffect")) return;
-      
+      if (frozen.contains(player)) return;
       // Player is hidden in supper vanish
       if (Bukkit.getPluginManager().isPluginEnabled("SuperVanish") || Bukkit.getPluginManager().isPluginEnabled("PremiumVanish"))
          if (VanishAPI.isInvisible(player)) return;
@@ -70,24 +80,45 @@ public class FancyTp extends JavaPlugin implements Listener {
       // If it isnt a command ignore it
       if (!e.getCause().equals(PlayerTeleportEvent.TeleportCause.COMMAND)) {return;}
       
+      
+      double distance = from.distance(to);
+      
+      // Get the equation solver
+      ScriptEngineManager mgr = new ScriptEngineManager();
+      ScriptEngine engine = mgr.getEngineByName("javascript");
+      
+      // Calculate cost and wait
+      int expCost = 0;
+      int tpWait = 0;
+      try {
+         Object tmp1 = engine.eval("cost = (" + cost.replace("%dist%", "(" + String.valueOf(distance) + ")") + ");");
+         Object tmp2 = engine.eval("wait = (" + wait.replace("%dist%", "(" + String.valueOf(distance) + ")") + ");");
+         player.sendMessage("cost:" + tmp1 + " wait: " + wait + " dist: " + distance);
+      } catch (ScriptException e1) {
+         System.out.println("Error in tp: ");
+         e1.printStackTrace();
+         return;
+      }
+      
+      if (tpWait < 0) tpWait = 0;
+      if (expCost < 0) expCost = 0;
+      
       // Cancel the event
       e.setCancelled(true);
       
       // Exp cost management
-      int expCost = (int)from.distance(to);
       int exp = player.getTotalExperience();
       if ((player.getGameMode().equals(GameMode.SURVIVAL) || player.getGameMode().equals(GameMode.ADVENTURE)) && !player.hasPermission("fancytp.nocost"))
          if (expCost > exp) {
             player.sendMessage("§cNot enough exp! Required: §6" + expCost + "§c Currently Have: §6" + exp + "§c!");
             return;
-         } else Bukkit.getScheduler().runTaskTimer(this, new ExpTask(player, expCost, 45 /*45 ticks per tp*/), 0, 1);
+         } else Bukkit.getScheduler().runTask(this, new ExpTask(this, player, expCost, tpWait + 5 /*45 ticks per tp*/));
       else expCost = -1;
       
       player.sendTitle(messages.getString("title").replace("&", "§"), messages.getString("subtitle").replace("&", "§").replace("%cost%", (expCost >= 0)?String.valueOf(expCost):"free"), 10, 30, 5);
       frozen.add(player);
-      from.getWorld().spawnParticle(Particle.PORTAL, from.clone().add(0, .5, 0), 1000, .1, .5, .1, 1);
-      to.getWorld().spawnParticle(Particle.PORTAL, to.clone().add(0, .5, 0), 1000, .1, .5, .1, 1);
-      Bukkit.getScheduler().runTaskLater(this, new TpTask(this, player, from, to), 40);
+      Bukkit.getScheduler().runTask(this, new EffectTask(this, from, to, tpWait));
+      Bukkit.getScheduler().runTaskLater(this, new TpTask(this, player, from, to), tpWait);
    }
    
    @EventHandler
