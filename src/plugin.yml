@@ -9,13 +9,18 @@ softdepend:
 - PremiumVanish
 commands:
   FancyTp:
-    description: Test if plugin is working
-    usage: /<command> <toggle|on|off> [player]
+    description: Enable/disable fancytp
+    usage: /<command> <toggle|on|off|reload> [player]
     permission: fancytp.toggle
-    permission-message: You need FancyTp.test to run
+    permission-message: You need FancyTp.toggle to run
+  FancyDeath:
+    description: Enable/disable fancydeath
+    usage: /<command> <toggle|on|off|reload> [player]
+    permission: fancytp.toggle
+    permission-message: You need FancyTp.toggle to run
   normaltp:
     description: Tp without the fancy
-    permissions: minecraft.command.tp
+    permissions: fancytp.normal
     alias: [ntp, tpnow]
 permissions:
   fancytp.*:
@@ -23,18 +28,26 @@ permissions:
     default: false
     children:
       fancytp.nocost: true
-      fancytp.noeffect: true
+      fancytp.notpeffect: true
+      fancytp.nodeatheffect: true
       fancytp.toggle: true
       fancytp.toggle.others: true
+      fancytp.reload: true
   fancytp.nocost:
     description: No exp cost when tping
     default: false
-  fancytp.noeffect:
+  fancytp.notpeffect:
     description:  No effect when tping
+    default: false
+  fancytp.nodeatheffect:
+    description:  No effect on death
     default: false
   fancytp.toggle:
     description: Allow toggling fancytp
     default: op
   fancytp.toggle.others:
     description: Allow toggling fancytp on others
+    default: op
+  fancytp.reload:
+    description: Allow user to reload plugin
     default: op

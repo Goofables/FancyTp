@@ -1,8 +1,6 @@
 package com.gmail.goofables.FancyTp;
 
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.Particle;
+import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
 
@@ -51,13 +49,22 @@ class TpTask implements Runnable {
     
     @Override
     public void run() {
-        Bukkit.getScheduler().runTaskLater(plugin, () -> plugin.frozen.remove(player), 5);
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            plugin.frozen.remove(player);
+            to.getWorld().playSound(to, Sound.ENTITY_ENDERMAN_TELEPORT, SoundCategory.PLAYERS, 2.0F, 1);
+            to.getWorld().playSound(to, Sound.ENTITY_ENDER_EYE_DEATH, SoundCategory.PLAYERS, 2.0F, 0.85f);
+        }, 1);
         
-        to.getWorld().spawnParticle(Particle.SMOKE_LARGE, from.clone().add(0, .5, 0), 500, 0, .25, 0, .1);
-        from.getWorld().spawnParticle(Particle.END_ROD, to.clone().add(0, .5, 0), 500, 0, .5, 0, .25);
-        from.getWorld().strikeLightningEffect(from);
-        to.getWorld().strikeLightningEffect(to);
-        player.teleport(to, TeleportCause.PLUGIN);
+        to.getWorld().spawnParticle(Particle.SMOKE_LARGE, from.clone().add(0, 1, 0), 500, 0, .25, 0, .1);
+        from.getWorld().spawnParticle(Particle.END_ROD, to.clone().add(0, 1, 0), 500, 0, .5, 0, .25);
+        //from.getWorld().strikeLightningEffect(from);
+        //to.getWorld().strikeLightningEffect(to);
+        
+        from.getWorld().playSound(from, Sound.ENTITY_ENDERMAN_TELEPORT, SoundCategory.PLAYERS, 2.0F, 1);
+        from.getWorld().playSound(from, Sound.ENTITY_ENDER_EYE_DEATH, SoundCategory.PLAYERS, 2.0F, 0.85f);
+        from.getWorld().playSound(from, Sound.ENTITY_WITHER_SHOOT, SoundCategory.PLAYERS, 2.0F, 0.0F);
+        
+        player.teleport(to, TeleportCause.UNKNOWN);
     }
 }
 
