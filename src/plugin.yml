@@ -1,7 +1,7 @@
 name: FancyTp
 version: Alpha_0.1
 author: Goofables
-main: com.gmail.goofables.FancyTp.FancyTp
+main: us.matrixcraft.FancyTp.FancyTp
 description: A spigot plugin
 softdepend:
 - Essentials
